@@ -1,0 +1,227 @@
+www.docs.docker.com/get-docker
+Download Desktop for Linux
+
+1. sudo apt-get update
+2. sudo apt-get install ca-certificates curl gnupg lsb-release
+3. sudo mkdir -p /etc/apt/keyrings
+4. curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+5. echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+6. sudo apt update
+7. sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+8. sudo apt-get install ./docker-desktop-<version>-<arch>.deb
+
+
+docker version
+
+
+docker run -e POSTGRES_PASSWORD=password postgres:9.6
+docker ps
+
+To pull the image from docker hub
+    docker pull redis
+
+To run the image
+    docker run redis
+
+To run the container in detach mode
+    docker run -d redis
+
+To run with bind port number
+    docker run -p6000:6379 redis:4.0 -d
+
+To list the images:
+    docker images   
+
+To list onlyrunning docker containers:
+    docker ps
+
+To list all docker containers:
+    docker ps -a
+
+To delete a container:
+    docker rm <container_id>
+
+To delete a image:
+    docker image rm <image_id>
+
+To delete a image:
+    docker rm image <image_id>
+
+To stop and start a container
+    docker stop <container_id>      eg.docker stop e82dc969f0e3
+    docker start <container_id>     eg.docker start e82dc969f0e3
+
+To get docker logs:
+    docker logs <container_id>
+    docker logs <container_name>
+
+To change container name stop it and start with name
+    docker run -d -p6001:6379 --name redis-older redis:4.0
+
+To open interactive mode of a container:
+    docker exec -it <container_id> /bin/bash        or      /bin/sh
+    exit
+
+===========================================================================================
+NETWORK:
+
+To list the docker network:
+    docker network ls 
+
+To create a new network:
+    docker network create <network_name>    eg.docker network create mongo-network
+
+To link create 
+    mongodb image:
+        docker run \
+        -p 27017:27017 -d \
+        -e MONGO_INITDB_ROOT_USERNAME=admin \
+        -e MONGO_INITDB_ROOT_PASSWORD=password \
+        --net mongo-network \
+        --name mongodb
+        mongo 
+    
+    mongo-express image for ui
+        docker run \
+        -p 8081:8081 -d \
+        -e ME_CONFIG_MONGODB_ADMINUSERNAME=admin \
+        -e ME_CONFIG_MONGODB_ADMINPASSWORD=password \
+        --net mongo-network \
+        --name mongo-express
+        -e ME_CONFIG_MONGODB_SERVER=mongodb \
+        mongo-express
+
+============================================================================
+Compose file:
+    mongo.yaml
+                version: '3'
+                services:
+                # my-app:
+                # image: ${docker-registry}/my-app:1.0
+                # ports:
+                # - 3000:3000
+                mongodb:    #container name
+                    image: mongo  #container image
+                    ports:
+                    - 27017:27017
+                    environment:
+                    - MONGO_INITDB_ROOT_USERNAME=admin
+                    - MONGO_INITDB_ROOT_PASSWORD=password
+                    volumes:
+                    - mongo-data:/data/db
+                mongo-express:
+                    image: mongo-express
+                    restart: always # fixes MongoNetworkError when mongodb is not ready when mongo-express starts
+                    ports:
+                    - 8080:8081
+                    environment:
+                    - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+                    - ME_CONFIG_MONGODB_ADMINPASSWORD=password
+                    - ME_CONFIG_MONGODB_SERVER=mongodb
+                volumes:
+                mongo-data:
+                    driver: local
+
+
+
+    docker-compose -f mongo.yaml up
+    docker-compose -f mongo.yaml down
+
+============================================================================
+
+Create Docker File:
+        FROM node:13-alpine
+
+        ENV MONGO_DB_USERNAME=admin \
+            MONGO_DB_PWD=password
+
+        RUN mkdir -p /home/app
+
+        COPY ./app /home/app
+
+        # set default dir so that next commands executes in /home/app dir
+        WORKDIR /home/app
+
+        # will execute npm install in /home/app because of WORKDIR
+        RUN npm install
+
+        # no need for /home/app/server.js because of WORKDIR
+        CMD ["node", "server.js"]
+
+Name of the file should be: 
+        Dockerfile
+
+To Build the Docker file:
+        docker build -t my-app:1.0 .
+
+Image is created from previous step, we can check that using:
+        docker images
+
+TO run:
+        docker run my-app:1.0
+
+shortcut to delete an image: (before deleting the image delete its container)
+        docker rmi <image_id>
+
+
+=======================================================================================
+LOGIN AWS (Amazon Container Service)
+    1. ECR
+    2. Create a Repository
+    3. my-app
+    4. Create a Repository
+    5. select the app and click on view push command 
+    6. copy the appeared credentials
+    7.  in local system
+            run the command in aws cli (need to be installed and configured) (Login)
+        copy another command to map the local image to particular Repository
+            run the next command (docker tag my-app:1.0 aws_repository_link ) from aws in the local system
+                new image is created with the repository image_id
+                check with docker images
+        docker push new_repository_image_id
+
+    8. Check in aws it has been pushed.  
+
+=======================================================================================
+Docker Volumes:
+    1. docker run -v host_directory:container_directory
+    2. docker run -v container_directory             (creates an anonymous file in /var/lib/docker/volumes/random-hash/_data)
+    3. docker run -v name:container_directory        (name of the folder file system)
+
+    To add the volume in compose file
+    mongo.yaml
+                version: '3'
+                services:
+                # my-app:
+                # image: ${docker-registry}/my-app:1.0
+                # ports:
+                # - 3000:3000
+                mongodb:    #container name
+                    image: mongo  #container image
+                    ports:
+                    - 27017:27017
+                    environment:
+                    - MONGO_INITDB_ROOT_USERNAME=admin
+                    - MONGO_INITDB_ROOT_PASSWORD=password
+                    volumes:
+                    - mongo-data:/data/db
+                mongo-express:
+                    image: mongo-express
+                    restart: always # fixes MongoNetworkError when mongodb is not ready when mongo-express starts
+                    ports:
+                    - 8080:8081
+                    environment:
+                    - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+                    - ME_CONFIG_MONGODB_ADMINPASSWORD=password
+                    - ME_CONFIG_MONGODB_SERVER=mongodb
+                volumes:
+                mongo-data:
+                    driver: local
+
+
+=======================================================================================
+Deploy from AWS ECR to Server:
+    1. 
+
+docker compose up
+docker-compose down --rmi all
